@@ -29,4 +29,24 @@ where
 					where job_id = 'FI_ACCOUNT')
 	and e.job_id = 'FI_ACCOUNT'			
 					
+/*
+3. Zobacz najdłużej pracujących pracowników każdego działu. (12 wierszy)
+*/
+
+select 
+	e.last_name ,
+	e.hire_date ,
+	d.department_id ,
+	d.department_name 
+	from employees e join departments d on e.department_id = d.department_id 
+where 
+	(e.department_id, hire_Date) in (
+									select 
+										department_id,
+										min(hire_Date)
+										from employees e 
+									group by department_id )
+
+
+
 
