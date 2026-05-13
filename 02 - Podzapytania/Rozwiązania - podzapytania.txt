@@ -50,3 +50,27 @@ where
 
 
 
+/*
+4.
+Wyświetlaj te nazwy stanowisk, w których nie zatrudniono nikogo z działu MARKETING. Wykorzystaj podzapytanie w podzapytaniu (17 wierszy)
+*/
+
+select * from jobs
+where
+	job_id in (select job_id from employees
+					where department_id not in (select department_id
+												from departments
+												where 
+												department_name='Marketing'))
+												
+												
+select *
+from jobs j
+where not exists (
+				select 1
+					from employees e
+					where e.job_id = j.job_id
+					and e.department_id = (
+							select d.department_id
+							from departments d
+							where d.department_name = 'Marketing'));
