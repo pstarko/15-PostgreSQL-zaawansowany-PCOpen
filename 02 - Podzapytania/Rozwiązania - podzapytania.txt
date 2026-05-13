@@ -10,3 +10,23 @@ select
 where
 	e.department_id = (select department_id from employees
 						where last_name = 'Miller')
+
+
+
+/*
+2. Wyświetl następujące dane o najdłużej zatrudnionym pracowniku na stanowisku FI_ACCOUNT (1 wiersz)
+*/
+
+select
+	e.employee_id ,
+	e.first_name ,
+	e.last_name ,
+	e.job_id ,
+	e.hire_date
+	from employees e 
+where
+	e.hire_date = (select min(hire_date) from employees
+					where job_id = 'FI_ACCOUNT')
+	and e.job_id = 'FI_ACCOUNT'			
+					
+
