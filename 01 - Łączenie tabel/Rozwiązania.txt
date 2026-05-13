@@ -49,4 +49,34 @@ where
 	l.city in ('Seattle', 'London','Munich','Sydney','Bombay','Stretford')
 group by
 	l.city 
-	
+
+/*
+5. Pokaż liczbę pracowników, którzy pracują w prowincji stanowej(State Province), zaczynającej się od litery T (1 wiersz) (1 wiersz)
+*/
+select
+	count(e.employee_id)
+	from employees e join departments d on e.department_id = d.department_id 
+					 right join locations l on d.location_id = l.location_id 
+where
+	l.state_province like 'T%'
+
+/*
+6. Pokaż poniższe informacje o pracownikach, którzy są zatrudnieni na stanowisku Accountant oraz Purchasing Clerk, 
+których roczny dochód przekracza 37200. 
+Roczny dochód jest dwunastokrotnością wynagrodzenia podstawowego wraz z prowizją (5 wierszy)
+*/
+					 
+select
+	e.last_name ,
+	j.job_title ,
+	(e.salary + (salary * coalesce(e.commission_pct,0))) * 12 salary
+	from employees e join jobs j on e.job_id =j.job_id 
+where
+	j.job_title in ('Accountant', 'Purchasing Clerk')
+	and (e.salary + (salary * coalesce(e.commission_pct,0))) * 12 > 37200
+
+
+
+
+
+
