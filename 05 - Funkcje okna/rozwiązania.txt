@@ -106,3 +106,24 @@ select
 group by
     DATE_PART('QUARTER', hire_date),
     DATE_PART('year', hire_date)
+
+
+/*
+b. Które kwartały bez względu na rok generowały większe zatrudnienie, utwórz ranking i pokaż również 
+jaka jest różnica zatrudnień pomiędzy kwartałami 1 i 2, 2 i 3, 3 i 4
+*/
+
+select
+	t1.*,
+	t1.poprzednik  - t1.ilosc roznica,
+	rank() over (order by t1.ilosc desc) ranking
+	from (
+		select
+		    DATE_PART('QUARTER', hire_date) kwartal,
+			count(*) ilosc,
+			lag(count(*)) over (order by DATE_PART('QUARTER', hire_date)) poprzednik
+		    from employees e
+		group by
+		    DATE_PART('QUARTER', hire_date) ) t1
+    
+    
