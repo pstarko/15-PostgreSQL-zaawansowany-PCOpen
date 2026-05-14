@@ -128,3 +128,41 @@ BEGIN
     RAISE NOTICE 'Suma obliczona wzorem: %', (liczba * (liczba + 1)) / 2;
 END $$;
 
+
+
+/*
+6.
+Napisz program, który zwróci Ci liczbę liter i cyfr w podanych ciągu znaków i cyfr. 
+Znajdź wcześniej odpowiednią funkcję, która Ci to umożliwi. 
+Do sprawdzenia czy znak jest liczbą czy literą wykorzystaj strukturę: 
+IF znak ~ ’[0-9]’ THEN …
+
+*/
+
+DO $$
+DECLARE
+    tekst TEXT := 'Agent8007'; -- Podaj tutaj swój ciąg znaków
+    liczba_liter INT := 0;
+    liczba_cyfr INT := 0;
+    i INT;
+    znak CHAR;
+BEGIN
+    -- Iteracja przez każdy znak w ciągu
+    FOR i IN 1..LENGTH(tekst) LOOP
+        znak := SUBSTRING(tekst,i,1);
+        
+        -- Sprawdzenie czy znak jest literą
+        IF znak ~ '[A-Za-z]' THEN
+            liczba_liter := liczba_liter + 1;
+        -- Sprawdzenie czy znak jest cyfrą
+        ELSIF znak ~ '[0-9]' THEN
+            liczba_cyfr := liczba_cyfr + 1;
+        END IF;
+    END LOOP;
+    
+    -- Wyświetlenie wyników
+    RAISE NOTICE 'Ciąg znaków: %', tekst;
+    RAISE NOTICE 'Liczba liter: %', liczba_liter;
+    RAISE NOTICE 'Liczba cyfr: %', liczba_cyfr;
+END $$;
+
