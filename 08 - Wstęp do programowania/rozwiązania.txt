@@ -1,0 +1,24 @@
+/*
+1. Użytkownik podaje dwie liczby X i Y. 
+Następnie pokazujesz mu liczby całkowite od X do Y.
+*/
+
+DO $$
+DECLARE
+    x INT := 15;  -- tutaj podaj pierwszą liczbę
+    y INT := 10; -- tutaj podaj drugą liczbę
+    i INT;
+    temp INT;
+BEGIN
+    -- Zamiana miejscami jeśli x > y
+    IF x > y THEN
+        temp := x;
+        x := y;
+        y := temp;
+    END IF;
+
+    -- Wyświetlenie liczb od x do y
+    FOR i IN x..y LOOP
+        RAISE NOTICE 'Liczba: %', i;
+    END LOOP;
+END $$;
