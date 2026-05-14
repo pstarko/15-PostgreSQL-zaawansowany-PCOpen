@@ -78,3 +78,31 @@ group by
 	
 	
 	
+/*
+7. Pokaż najlepiej zarabiającego pracownika w każdym kraju. Pokaż też kraje, które nie zatrudniają pracowników (25 wierszy)
+*/
+
+
+SELECT
+	distinct c.country_name ,
+	first_value(e.first_name || ' ' ||e.last_name || ' ' ||e.salary) 
+		over (partition by c.country_name order by e.salary desc)
+	from employees e join departments d on e.department_id=d.department_id
+					 join locations l on d.location_id=l.location_id
+					 right join countries c on c.country_id=l.country_id
+order by 2
+
+/*
+8. Przeanalizuj zarobki w osobnych raportach
+	a. Wzrost wynagrodzeń w kolejnych kwartałach(25 wierszy)
+*/
+
+
+select
+	DATE_PART('year', hire_date) rok,
+    DATE_PART('QUARTER', hire_date) kwartal,
+    sum(sum(salary)) over (order by DATE_PART('year', hire_date), DATE_PART('QUARTER', hire_date)) naras
+    from employees e
+group by
+    DATE_PART('QUARTER', hire_date),
+    DATE_PART('year', hire_date)
