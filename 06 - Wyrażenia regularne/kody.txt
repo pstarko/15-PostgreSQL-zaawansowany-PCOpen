@@ -1,0 +1,82 @@
+select
+	last_name 
+from employees
+where
+	last_name ilike 'k%'
+
+explain
+select
+	last_name 
+from employees
+where
+	last_name ~~'K%'
+	
+
+select
+	last_name 
+from employees
+where
+	last_name !~~'K%'
+	
+	
+--szukanie ciągów z litery "k" case-sensitve
+select
+	last_name 
+from employees
+where
+	last_name ~'k'
+
+--szukanie ciągów z litery "k" case-insensitve
+select
+	last_name 
+from employees
+where
+	last_name ~*'K'
+
+
+	
+SELECT 
+	last_name,
+	substring(last_name similar '%o{2}' escape '#') AS match
+FROM employees
+
+	
+SELECT 
+	'ab%%as',
+	substring('ab%%as' similar '%#%{2}%' escape '#') AS match
+
+	
+SELECT regexp_count('ala ma kota, a kot ma ale', 'ma');
+
+SELECT regexp_count('a1b2c3d4', '[[:digit:]]');
+
+
+SELECT regexp_match('bananabanana', 'na');
+
+SELECT regexp_matches('bananabanana', '(na)', 'g');
+
+SELECT regexp_instr('bananabanana', 'na', 1, 2);
+
+SELECT regexp_instr('PostgresREGEX', 'regex', 1, 1, 0, 'i');
+
+SELECT regexp_replace('Jan Kowalski', '([A-Za-z]+) ([A-Za-z]+)', '\2, \1');
+
+SELECT regexp_replace('Tel: +48-123-456-789', '[^0-9]', '', 'g');
+
+SELECT regexp_substr('a1b2c3d4', '[[:digit:]]', 1, 3);
+
+
+
+
+
+
+
+
+
+
+
+
+
+	
+	
+	
