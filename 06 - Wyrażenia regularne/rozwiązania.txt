@@ -21,3 +21,38 @@ d.
 Adres e-mail w formacie (imię.nazwa@domena.com)*/
 
 SELECT REGEXP_LIKE('jan.kowalski@domena.com', '^[a-z]+\.[a-z]+@[a-z]{2,}\.com$');
+
+/*
+2.
+Pokaż nazwiska pracowników (wielkość liter nie ma znaczenia):
+	a.
+	które kończą się na „i” i nie zaczynają się na „d”
+	
+	b.
+	mieć co najmniej 2 litery „a”
+*/
+
+SELECT last_name
+FROM Employees
+WHERE REGEXP_LIKE(last_name, 'i$', 'i') 
+  AND NOT REGEXP_LIKE(last_name, '^d', 'i');
+
+
+
+SELECT last_name
+FROM Employees
+WHERE REGEXP_LIKE(last_name, '([aA].*){2,}');
+
+
+/*
+3.
+Pokaż ranking pracowników ze względu na ilość liter w (suma first_name, last_name i job_id).
+*/
+
+select
+	e.first_name,
+	e.last_name,
+	e.job_id,
+	regexp_count(e.first_name||e.last_name||e.job_id, '[a-zA-Z]'),
+	rank() over (order by regexp_count(e.first_name||e.last_name||e.job_id, '[a-zA-Z]'))
+from employees e;
