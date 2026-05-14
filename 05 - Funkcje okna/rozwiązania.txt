@@ -9,6 +9,23 @@ select
 	sum(count(*)) over (order by date_part('year', hire_date)) narast_
 	from employees/*
 
+
+/*
+2. Zmień powyższy raport o informacje na jaki etat zostali zatrudnieni pracownicy. 
+Również dodaj kolumnę z wartościami narastającymi(47 wierszy)
+*/
+	
+	select
+	date_part('year', hire_date),
+	j.job_title ,
+	count(*) ilosc_zatrudnien,
+	sum(count(*)) over (order by date_part('year', hire_date), j.job_title ) narast_
+	from employees e join jobs j on e.job_id = j.job_id 
+group by
+	date_part('year', hire_date),
+	j.job_title 
+
+
 3. Posortuj dane pracowników po job_title. Pokaż first and last name oraz salary. 
 W dodatkowej kolumnie pokaż ile w sumie wydajemy dla całego etatu. 
 Kolejna kolumna to procent udziału poszczególnego pracownika w wydatkach na etat (107 wierszy)
@@ -28,17 +45,36 @@ select
 group by
 	date_part('year', hire_date)
 
+
+
 /*
-2. Zmień powyższy raport o informacje na jaki etat zostali zatrudnieni pracownicy. 
-Również dodaj kolumnę z wartościami narastającymi(47 wierszy)
+5. Pokaż raport pracowników zatrudnionych w poszczególnych departamentach (11 wierszy)
 */
-	
-	select
-	date_part('year', hire_date),
-	j.job_title ,
-	count(*) ilosc_zatrudnien,
-	sum(count(*)) over (order by date_part('year', hire_date), j.job_title ) narast_
-	from employees e join jobs j on e.job_id = j.job_id 
+
+select
+	d.department_name,
+	string_agg(e.last_name, ',' order by e.last_name)
+	from employees e join departments d on e.department_id = d.department_id 
 group by
-	date_part('year', hire_date),
-	j.job_title 
+	d.department_name 
+	
+/*
+6. Zaktualizuj powyższe zapytanie w taki sposób, by otrzymać tylko pierwsze dwa nazwiska (11 wierszy)
+*/
+
+select
+	t1.department_name ,
+	string_agg(t1.last_name, ',')
+	from (
+			select
+				d.department_name,
+				e.last_name,
+				row_number() over (partition by d.department_name  order by e.last_name ) rn
+				from employees e join departments d on e.department_id = d.department_id ) t1
+where
+	t1.rn <=2
+group by
+	t1.department_name
+	
+	
+	
