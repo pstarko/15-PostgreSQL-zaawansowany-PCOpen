@@ -41,3 +41,90 @@ BEGIN
         END IF;
     END LOOP;
 END $$;
+
+
+
+DROP TABLE IF EXISTS Klienci;
+
+CREATE TABLE Klienci (
+Id INT PRIMARY KEY,
+Imie VARCHAR(50),
+Nazwisko VARCHAR(50),
+Saldo DECIMAL(10, 2),
+Status VARCHAR(20)
+);
+
+INSERT INTO Klienci (Id, Imie, Nazwisko, Saldo, Status)
+VALUES
+(1, 'Anna', 'Kowalska', 15000.00, NULL),
+(2, 'Jan', 'Nowak', 5000.00, NULL),
+(3, 'Ewa', 'Zielińska', 900.00, NULL),
+(4, 'Tomasz', 'Wiśniewski', 10500.00, NULL),
+(5, 'Katarzyna', 'Wójcik', 0.00, NULL);
+
+/*
+Napisz skrypt, który:
+•
+Dla każdego klienta zaktualizuje kolumnę Status w zależności od wartości Saldo:
+	o VIP jeśli Saldo > 10000
+	o Standard jeśli Saldo BETWEEN 1000 AND 10000
+	o Zagrożony jeśli Saldo < 1000
+	o Zmień dane w tabeli i wypisz je w konsoli
+	
+Użyj: CASE
+*/
+
+
+DO $$
+DECLARE
+    klient_rec RECORD;
+    kursor CURSOR FOR SELECT * FROM Klienci;
+BEGIN
+    -- Aktualizacja statusu dla wszystkich klientów
+    UPDATE Klienci
+    SET Status = CASE
+        WHEN Saldo > 10000 THEN 'VIP'
+        WHEN Saldo BETWEEN 1000 AND 10000 THEN 'Standard'
+        WHEN Saldo < 1000 THEN 'Zagrożony'
+    END;
+    
+    -- Wypisanie zaktualizowanych danych w konsoli
+    OPEN kursor;
+    LOOP
+        FETCH kursor INTO klient_rec;
+        EXIT WHEN NOT FOUND;
+        
+        RAISE NOTICE 'Klient ID: %, Imię: %, Nazwisko: %, Saldo: %, Status: %',
+            klient_rec.Id, klient_rec.Imie, klient_rec.Nazwisko, 
+            klient_rec.Saldo, klient_rec.Status;
+    END LOOP;
+    CLOSE kursor;
+END $$;
+
+
+
+/*
+5.
+Napisz program do obliczania kolejnych liczb całkowitych. 
+Np. po podaniu liczby 5 otrzymasz 15(czyli 1+2+3+4+5)
+
+*/
+
+DO $$
+DECLARE
+    liczba INT := 6; -- Podaj tutaj liczbę, dla której chcesz obliczyć sumę
+    suma INT := 0;
+    i INT;
+BEGIN
+    -- Obliczanie sumy za pomocą pętli
+    FOR i IN 1..liczba LOOP
+        suma := suma + i;
+    END LOOP;
+    
+    -- Wyświetlenie wyniku
+    RAISE NOTICE 'Suma liczb od 1 do % wynosi %', liczba, suma;
+    
+    -- Alternatywnie, można użyć wzoru na sumę ciągu arytmetycznego: n*(n+1)/2
+    RAISE NOTICE 'Suma obliczona wzorem: %', (liczba * (liczba + 1)) / 2;
+END $$;
+
