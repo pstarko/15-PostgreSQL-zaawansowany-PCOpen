@@ -1,0 +1,6 @@
+--a. Numer PESEL (11 znaków)
+
+select
+	regexp_like('12345678901', '^[0-9]{11}$')
+
+
