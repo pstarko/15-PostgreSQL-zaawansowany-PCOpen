@@ -22,3 +22,22 @@ BEGIN
         RAISE NOTICE 'Liczba: %', i;
     END LOOP;
 END $$;
+
+
+/*
+2.
+Stwórz pętlę pokazującą informację: Liczba 50, Liczba 49…., Liczba 1. 
+Pętla rozpoczyna się od 50 a kończy na 1. Pomiń liczby parzyste pomiędzy 20 a 30.
+*/
+
+DO $$
+DECLARE
+    i INTEGER;
+BEGIN
+    FOR i IN REVERSE 50..1 LOOP
+        -- Pomijamy liczby parzyste między 20 a 30
+        IF NOT (i BETWEEN 20 AND 30 AND i % 2 = 0) THEN
+            RAISE NOTICE 'Liczba %', i;
+        END IF;
+    END LOOP;
+END $$;
