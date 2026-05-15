@@ -1,0 +1,46 @@
+CREATE EXTENSION vector;
+
+CREATE TABLE items (id bigserial PRIMARY KEY, embedding vector(3));
+
+INSERT INTO items (embedding) VALUES ('[1,2,3]'), ('[4,5,6]');
+
+--Uzyskaj najbliższych sąsiadów według odległości L2
+SELECT * FROM items ORDER BY embedding <-> '[3,1,2]' LIMIT 5;
+
+
+CREATE TABLE produkty (
+    id SERIAL PRIMARY KEY,
+    nazwa TEXT,
+    opis TEXT,
+    cechy_vector VECTOR(3)  -- 3-wymiarowy wektor dla prostoty
+);
+
+INSERT INTO produkty (nazwa, opis, cechy_vector) VALUES
+    ('Laptop Gaming', 'Wysokiej klasy laptop do gier', '[0.9, 0.8, 0.7]'),
+    ('Laptop Biurowy', 'Podstawowy laptop do pracy', '[0.3, 0.6, 0.8]'),
+    ('Laptop Premium', 'Drogi laptop biznesowy', '[0.95, 0.9, 0.6]'),
+    ('Tablet Podstawowy', 'Tani tablet do internetu', '[0.2, 0.4, 0.9]'),
+    ('Tablet Pro', 'Profesjonalny tablet graficzny', '[0.8, 0.85, 0.5]');
+
+
+SELECT 
+    nazwa,
+    opis,
+    cechy_vector,
+    -- Obliczamy podobieństwo kosinusowe (1 - cosine distance)
+    1 - (cechy_vector <=> '[0.85, 0.8, 0.6]') as podobienstwo_kosinusowe,
+    -- Dla porównania - odległość euklidesowa
+    cechy_vector <-> '[0.85, 0.8, 0.6]' as odleglosc_euklidesowa
+FROM produkty
+ORDER BY cechy_vector <=> '[0.85, 0.8, 0.6]'  -- Sortujemy po odległości kosinusowej
+LIMIT 5;
+
+
+CREATE OR REPLACE FUNCTION show_python_path()
+RETURNS text
+AS $$
+import sys
+return sys.executable
+$$ LANGUAGE plpython3u;
+
+
