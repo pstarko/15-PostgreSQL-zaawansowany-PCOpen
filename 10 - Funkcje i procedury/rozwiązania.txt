@@ -1,0 +1,83 @@
+drop table log_emp;
+
+-- Najpierw utwórz tabelę Log_emp (jeśli jeszcze nie istnieje)
+CREATE TABLE IF NOT EXISTS Log_emp (
+    id SERIAL PRIMARY KEY,
+    information TEXT,
+    insert_date_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Procedura log_total_employees()
+CREATE OR REPLACE PROCEDURE log_total_employees()
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    x INT := 0;
+    komunikat TEXT;
+BEGIN
+    -- Zliczenie pracowników z tabeli emp
+    SELECT COUNT(*) INTO x FROM employees;
+    
+    -- Przygotowanie komunikatu
+    komunikat := 'Ilość pracowników na dzień ' || 
+                 				  CURRENT_DATE ||
+                 ', to: ' || x;
+    
+    -- Wyświetlenie komunikatu w konsoli
+    RAISE NOTICE '%', komunikat;
+    
+    -- Zapisanie informacji w tabeli Log_emp
+    INSERT INTO Log_emp (information, insert_date_time)
+    VALUES (komunikat, CURRENT_TIMESTAMP);
+    
+END;
+$$;
+
+-- Wywołanie procedury
+CALL log_total_employees();
+
+-- Sprawdzenie zawartości tabeli Log_emp
+SELECT * FROM Log_emp ORDER BY insert_date_time DESC;
+
+
+drop table emp_temp 
+
+create temp table emp_temp 
+as
+select employee_id, last_name, salary from employees
+
+
+CREATE OR REPLACE PROCEDURE apply_global_adjustment(
+  adjustment_amount DECIMAL,
+  v_emp_id INT DEFAULT null,
+  v_czyWszyscy int default 0
+)
+LANGUAGE plpgsql
+AS $$
+declare
+	czyBonus int := 0;
+begin
+	if v_czyWszyscy = 0 then			
+		select count(*) into czyBonus from bonus where emp_id = v_emp_id;
+		if czyBonus = 0 then
+			update emp_temp set salary = salary + adjustment_amount where employee_id = v_emp_id;
+			insert into bonus(emp_id) values (v_emp_id);
+		else
+			raise notice 'Bonus już został kiedyś dodany';
+		end if;
+	else
+		update emp_temp set salary = salary + adjustment_amount;
+	end if;
+END;
+$$;
+
+
+call apply_global_adjustment(99, 101,1);
+
+select * from emp_temp
+where employee_id = 101;
+
+
+create table bonus (emp_id int,  insert_date_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP);
+
+select * from bonus;
