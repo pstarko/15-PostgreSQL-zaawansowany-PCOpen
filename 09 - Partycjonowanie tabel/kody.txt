@@ -102,3 +102,97 @@ DROP TABLE orders_2023;
 
 explain
 select * from orders_2024
+
+
+
+
+---> Partycjonowanie LIST (po kategorii)
+
+drop table products cascade;
+		
+		CREATE TABLE products (
+			id       BIGSERIAL,
+			name     TEXT,
+			category TEXT NOT NULL,
+			price    NUMERIC(10,2)
+		) PARTITION BY LIST (category);
+
+		CREATE TABLE products_electronics
+			PARTITION OF products
+			FOR VALUES IN ('electronics', 'computers', 'phones');
+
+		CREATE TABLE products_clothing
+			PARTITION OF products
+			FOR VALUES IN ('clothing', 'shoes', 'accessories');
+
+		CREATE TABLE products_other
+			PARTITION OF products DEFAULT;
+
+-- Elektronika → products_electronics
+INSERT INTO products (name, category, price) VALUES
+  ('iPhone 15 Pro',        'phones',       4999.00),
+  ('MacBook Air M3',       'computers',    6499.00),
+  ('Samsung OLED 65"',     'electronics',  3200.00),
+  ('AirPods Pro',          'electronics',   999.00),
+  ('Lenovo ThinkPad X1',   'computers',    5800.00);
+
+-- Odzież → products_clothing
+INSERT INTO products (name, category, price) VALUES
+  ('Nike Air Max 90',      'shoes',         599.00),
+  ('Levi''s 501 Jeans',    'clothing',      299.00),
+  ('Leather Wallet',       'accessories',    89.00),
+  ('Adidas Hoodie',        'clothing',      249.00),
+  ('Ray-Ban Aviator',      'accessories',   450.00);
+
+-- Inne → products_other (DEFAULT)
+INSERT INTO products (name, category, price) VALUES
+  ('Yoga Mat',             'sports',         79.00),
+  ('Coffee Maker',         'kitchen',       349.00),
+  ('Harry Potter Box Set', 'books',         120.00);		
+		
+
+EXPLAIN ANALYZE
+SELECT * FROM products
+WHERE category IN ('electronics', 'phones');
+
+SELECT tableoid::regclass AS partition, id, name, category, price
+FROM products
+ORDER BY partition, category;	
+
+
+SELECT DISTINCT ON (tableoid::regclass)
+  tableoid::regclass AS partition,
+  name,
+  category,
+  price
+FROM products
+ORDER BY tableoid::regclass, price DESC;
+
+
+--Dodanie nowej kategorii do istniejącej partycji:
+
+ALTER TABLE products
+    ATTACH PARTITION products_electronics
+    FOR VALUES IN ('electronics', 'computers', 'phones', 'tablets');
+
+-- 1. Odepnij partycję
+ALTER TABLE products DETACH PARTITION products_electronics;
+
+ALTER TABLE products
+    ATTACH PARTITION products_electronics
+    FOR VALUES IN ('electronics', 'computers', 'phones', 'tablets');
+
+CREATE TABLE products_tablets
+    PARTITION OF products
+    FOR VALUES IN ('tablets');
+
+--Porównanie RANGE vs LIST
+Cecha				RANGE (orders)					LIST (products)
+Klucz podziału		Zakres ciągły (daty, liczby)		Dyskretne wartości (kategorie, statusy)
+Pruning				WHERE created_at > ...			WHERE category = ...
+Typowy use case		Dane czasowe, logi				Słowniki, enumy, regiony
+Partycja DEFAULT		Dane spoza zakresów				Nieznane/nowe kategorie		
+
+
+
+
