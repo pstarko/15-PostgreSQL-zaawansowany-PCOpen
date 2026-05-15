@@ -1,0 +1,308 @@
+create or replace procedure proc()
+language plpgsql    
+as $$
+declare	x int := 0;
+begin
+    select 
+    	count(*) into x
+    	from employees;
+    raise notice 'Ilośc pracowników %', x;
+end;$$
+
+call proc()
+
+
+
+---DynamicSQL
+
+/*
+Funkcja quote_ident() w PostgreSQL służy do bezpiecznego cytowania identyfikatorów, takich jak nazwy tabel, kolumn, schematów, funkcji itp. 
+Jest to bardzo ważne w dynamicznym SQL, aby zapobiec błędom składni i atakom typu SQL injection.
+
+Dlaczego używać quote_ident()?
+Obsługa znaków specjalnych: Identyfikatory w SQL mogą zawierać znaki specjalne, takie jak spacje, myślniki, znaki narodowe, czy słowa kluczowe SQL. 
+quote_ident() otacza identyfikator podwójnymi cudzysłowami ("), co pozwala na użycie takich identyfikatorów bez powodowania błędów składni.
+
+Unikanie konfliktów ze słowami kluczowymi: Jeśli nazwa tabeli lub kolumny jest słowem kluczowym SQL (np. user, order, group), quote_ident() zapewni, 
+że zostanie ona potraktowana jako identyfikator, a nie jako słowo kluczowe.
+
+Zapobieganie SQL injection: Użycie quote_ident() jest kluczowe w zapobieganiu atakom SQL injection, gdy identyfikatory pochodzą z zewnętrznych źródeł 
+(np. od użytkownika). Bez odpowiedniego cytowania, złośliwy użytkownik może wstrzyknąć kod SQL do zapytania, 
+co może prowadzić do nieautoryzowanego dostępu do danych lub uszkodzenia bazy danych.
+
+Zawsze używaj quote_ident() podczas budowania dynamicznych zapytań SQL, w których identyfikatory pochodzą z zewnętrznych źródeł lub mogą zawierać znaki specjalne.
+*/
+
+CREATE OR REPLACE FUNCTION get_table_data(
+    table_name TEXT,
+    column_name TEXT,
+    condition TEXT DEFAULT NULL
+) 
+RETURNS TABLE (result TEXT) AS $$
+DECLARE
+    query TEXT;
+BEGIN
+    -- Budowanie dynamicznego zapytania SQL
+    query := 'SELECT ' || quote_ident(column_name) || '::text AS result FROM ' || quote_ident(table_name);
+    
+    -- Dodanie warunku, jeśli został podany
+    IF condition IS NOT NULL THEN
+        query := query || ' WHERE ' || condition;
+    END IF;
+    
+    -- Wykonanie dynamicznego zapytania i zwrócenie wyników
+    RETURN QUERY EXECUTE query;
+END;
+$$ LANGUAGE plpgsql;
+
+explain
+SELECT * FROM get_table_data('employees', 'last_name');
+
+SELECT * FROM get_table_data('employees', 'last_name', 'salary > 10000');
+
+
+--IN
+create or replace function fun2(var_emp  int)
+returns varchar
+as $$
+declare 
+	x varchar(100);
+begin 
+	select 
+		last_name into x
+		from employees
+	where employee_id = var_emp;
+	
+	if not found then
+		raise 'Brak danych';
+	end if;
+return x;
+end $$ language plpgsql
+
+
+select fun2(125)
+
+
+--parametr domyślny
+CREATE OR REPLACE FUNCTION fun_dom(x int = 50)
+	returns int
+as $$
+	select x;
+$$ language sql
+
+
+select fun_dom(100), fun_dom()
+
+--default -- second version
+create or replace function fun5(x int default 10)
+returns int
+as $$
+declare 
+	zmienna int;
+begin 
+	select 
+		x into zmienna;
+return zmienna;
+end $$ language plpgsql
+
+
+create or replace function fun11(var_salary int)
+returns int
+language plpgsql 
+as $$
+declare 
+	x int:=0;
+begin 
+	select 
+		count(*) into x
+		from employees
+	where salary > var_salary;
+return x;
+end $$
+
+select fun11(15000)
+select fun11(var_salary:=10000)
+select fun11(var_salary=>10000)
+
+
+--RETURNS TABLE
+create or replace function get_name(id int)
+returns table (first_name varchar, last_name varchar)
+as $$
+begin
+	return query
+	select 
+		e.first_name,
+		e.last_name
+		from employees e
+	where employee_id = id;
+end
+$$ language plpgsql;
+
+explain
+select * from get_name(99)
+
+
+
+create or replace function fun1()
+returns table (suma integer)
+language plpgsql
+as 
+$$ 
+begin
+	PERFORM
+		10 as ans;
+end;
+$$ 
+
+select * from fun1()
+--pusty wyniki (Perform nic nie zwraca - do użycia przy funkcji z update -> DO $$ BEGIN PERFORM fun1(); END; $$;
+
+drop function fun1
+
+create or replace function fun1(out a int)
+language plpgsql
+as 
+$$ 
+begin
+	SELECT
+		10 as ans into fun1.a;
+end;
+$$ 
+
+select * from fun1()
+
+
+create or replace function fun1(out i int)
+language plpgsql
+as 
+$$ 
+begin
+	i:= 40;
+	return; --nie potrzebujemy wpisywać zmiennej
+end;
+$$ 
+
+
+select * from fun1()
+
+drop function fun1
+
+
+--SETOF --RETURNS SETOF composite_type - gdy potrzebujemy zdefiniowanego typu
+create or replace function fun1()
+returns setof INT 
+language plpgsql
+as 
+$$ 
+begin
+	return next 10;
+	return next 100;
+end;
+$$ 
+
+select * from fun1()
+
+--SETOF composite_type
+-- Najpierw definiujemy typ złożony
+CREATE TYPE employee_info AS (
+    full_name text,
+    salary numeric
+);
+
+
+CREATE OR REPLACE FUNCTION get_employees_info(p_dept_id numeric)
+RETURNS SETOF employee_info AS $$
+DECLARE
+    emp_record employee_info;
+    emp_cursor CURSOR FOR 
+        SELECT 
+            first_name || ' ' || last_name,
+            salary
+        FROM employees
+        WHERE department_id = p_dept_id;
+BEGIN
+    -- Możemy wykonać złożoną logikę przed zwróceniem wyników
+    -- np. walidację, obliczenia, itp.
+    
+    -- Otwieramy kursor i zwracamy wyniki
+    FOR emp_record IN emp_cursor LOOP
+        RETURN NEXT emp_record;
+    END LOOP;
+    
+    RETURN;
+END;
+$$ LANGUAGE plpgsql;
+
+select * from get_employees_info(50)
+
+
+--SETOF record
+CREATE OR REPLACE FUNCTION get_complex_employee_data(p_rate numeric)
+RETURNS SETOF record AS $$
+DECLARE
+    temp_table_name text;
+    query text;
+BEGIN
+    -- Tworzymy tymczasową tabelę
+    temp_table_name := 'temp_emp_' || md5(random()::text);
+    
+    -- Poprawiona składnia - USING jest częścią instrukcji EXECUTE
+    EXECUTE format('CREATE TEMP TABLE %I AS
+        SELECT 
+            department_id,
+            COUNT(*) AS employee_count,
+            AVG(salary) AS avg_rate
+        FROM employees
+        WHERE salary > $1
+        GROUP BY department_id', temp_table_name)
+    USING p_rate;
+    
+    -- Możemy wykonać dodatkowe operacje na tymczasowej tabeli
+    EXECUTE format('UPDATE %I SET avg_rate = ROUND(avg_rate, 2)', temp_table_name);
+    
+    -- Zwracamy wyniki
+    RETURN QUERY EXECUTE format('SELECT * FROM %I', temp_table_name);
+    
+    -- Usuwamy tymczasową tabelę
+    EXECUTE format('DROP TABLE %I', temp_table_name);
+END; $$ LANGUAGE plpgsql;
+
+
+
+SELECT * FROM get_complex_employee_data(5000) AS 
+(dept_id numeric, emp_count bigint, average_rate numeric);
+
+
+--PRZECIĄŻENIE FUNKCJI
+--polimorfizm (przeciążenia)
+create or replace function poli(x int, y int) returns int
+language sql as 'SELECT x+y;';
+
+create or replace function poli(x float, y float) returns float
+language sql as 'SELECT x+y;';
+
+create or replace function phi() returns float
+language sql as 'SELECT 99';
+
+select poli(2,5), poli(4.9, phi());
+
+select poli('A'::CHAR, 'B'::CHAR);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
