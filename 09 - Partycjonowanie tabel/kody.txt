@@ -194,5 +194,56 @@ Typowy use case		Dane czasowe, logi				Słowniki, enumy, regiony
 Partycja DEFAULT		Dane spoza zakresów				Nieznane/nowe kategorie		
 
 
+--> Partycjonowanie HASH (równomierne rozłożenie)
 
+		CREATE TABLE events (
+			id      BIGSERIAL,
+			user_id INT NOT NULL,
+			payload JSONB
+		) PARTITION BY HASH (user_id);
+
+		-- 4 partycje — modulo 4
+		CREATE TABLE events_p0 PARTITION OF events FOR VALUES WITH (MODULUS 4, REMAINDER 0);
+		CREATE TABLE events_p1 PARTITION OF events FOR VALUES WITH (MODULUS 4, REMAINDER 1);
+		CREATE TABLE events_p2 PARTITION OF events FOR VALUES WITH (MODULUS 4, REMAINDER 2);
+		CREATE TABLE events_p3 PARTITION OF events FOR VALUES WITH (MODULUS 4, REMAINDER 3);
+		
+--> Indeksy na partycjach
+
+		-- Indeks na tabeli nadrzędnej → automatycznie tworzony na wszystkich partycjach
+		CREATE INDEX ON events (id);
+		CREATE INDEX ON events (user_id);
+
+		-- Lub indeks tylko na konkretnej partycji
+		CREATE INDEX ON events_p0 (id);
+		
+--> Wstawianie i sprawdzanie danych
+
+		-- Wstaw dane testowe
+		INSERT INTO events (user_id, payload)
+		SELECT
+		    (random() * 99999 + 1)::INT AS user_id,
+		    jsonb_build_object(
+		        'event_type', (ARRAY['click', 'view', 'purchase', 'login', 'logout'])[floor(random() * 5 + 1)::INT],
+		        'timestamp',  now() - (random() * interval '365 days'),
+		        'session_id', md5(random()::TEXT),
+		        'metadata', jsonb_build_object(
+		            'ip',      concat(
+		                           (random()*255)::INT, '.',
+		                           (random()*255)::INT, '.',
+		                           (random()*255)::INT, '.',
+		                           (random()*255)::INT
+		                       ),
+		            'browser', (ARRAY['Chrome', 'Firefox', 'Safari', 'Edge'])[floor(random() * 4 + 1)::INT],
+		            'os',      (ARRAY['Windows', 'macOS', 'Linux', 'Android', 'iOS'])[floor(random() * 5 + 1)::INT]
+		        )
+		    ) AS payload
+		FROM generate_series(1, 100000);
+
+		-- Sprawdź rozkład danych po partycjach
+		SELECT
+			tableoid::regclass AS partycja,
+			COUNT(*) AS liczba_wierszy
+		FROM events
+		GROUP BY tableoid;	
 
