@@ -1,0 +1,104 @@
+--Partycjonowanie tabel w PostgreSQL
+
+/*
+Partycjonowanie to technika podziału dużej tabeli na mniejsze, fizycznie oddzielne fragmenty (partycje), 
+które zachowują się jak jedna logiczna tabela. 
+Świetnie sprawdza się przy tabelach z milionami/miliardami wierszy.
+
+Kiedy warto partycjonować?
+	Tabele z danymi historycznymi (logi, zdarzenia, transakcje)
+	Zapytania filtrujące po zakresie dat lub kategorii
+	Potrzeba szybkiego usuwania starych danych (DROP PARTITION zamiast DELETE)
+	Tabele > kilkaset GB
+*/
+
+--> Architektura.png
+
+--> Warsztat 1
+
+-- Krok 1 — Partycjonowanie RANGE (po dacie)
+
+	drop table orders cascade;
+		
+		CREATE TABLE orders (
+			id          BIGSERIAL,
+			created_at  TIMESTAMPTZ NOT NULL,
+			customer_id INT,
+			amount      NUMERIC(10,2),
+			status      TEXT
+		) PARTITION BY RANGE (created_at);
+
+		-- Partycje roczne
+		CREATE TABLE orders_2023
+			PARTITION OF orders
+			FOR VALUES FROM ('2023-01-01') TO ('2024-01-01');
+
+		CREATE TABLE orders_2024
+			PARTITION OF orders
+			FOR VALUES FROM ('2024-01-01') TO ('2025-01-01');
+
+		CREATE TABLE orders_2025
+			PARTITION OF orders
+			FOR VALUES FROM ('2025-01-01') TO ('2026-01-01');
+
+		-- Partycja domyślna (dla wartości spoza zakresów)
+		CREATE TABLE orders_default
+			PARTITION OF orders DEFAULT;
+
+
+--inserty
+-- Dane z 2023
+INSERT INTO orders (created_at, customer_id, amount, status) VALUES
+  ('2023-03-15 10:30:00+00', 101, 250.00, 'completed'),
+  ('2023-07-22 14:15:00+00', 102, 1200.50, 'completed'),
+  ('2023-11-30 09:00:00+00', 103,   89.99, 'refunded');
+
+-- Dane z 2024
+INSERT INTO orders (created_at, customer_id, amount, status) VALUES
+  ('2024-01-05 08:00:00+00', 104,  499.00, 'completed'),
+  ('2024-06-18 16:45:00+00', 105, 3200.00, 'pending'),
+  ('2024-09-01 11:20:00+00', 101,  150.75, 'completed'),
+  ('2024-12-31 23:59:00+00', 106,  999.99, 'completed');
+
+-- Dane z 2025
+INSERT INTO orders (created_at, customer_id, amount, status) VALUES
+  ('2025-02-14 12:00:00+00', 107,  320.00, 'pending'),
+  ('2025-05-01 07:30:00+00', 102,   75.00, 'completed');
+
+-- Dane spoza zakresów → trafią do orders_default
+INSERT INTO orders (created_at, customer_id, amount, status) VALUES
+  ('2021-06-10 10:00:00+00', 199, 5000.00, 'archived'),
+  ('2026-01-01 00:00:00+00', 200,  100.00, 'pending');
+
+
+--1. Partition pruning — Postgres skanuje tylko orders_2024:		
+EXPLAIN ANALYZE
+SELECT * FROM orders
+WHERE created_at BETWEEN '2024-01-01' AND '2024-12-31';
+
+--2. Sprawdzenie, w której partycji fizycznie leżą dane:
+SELECT tableoid::regclass AS partition, id, created_at, amount, status
+FROM orders
+ORDER BY created_at;
+		
+
+--3. Agregacja per rok — każda partycja liczona osobno:
+explain
+SELECT
+  DATE_TRUNC('year', created_at) AS year,
+  COUNT(*)                        AS orders_count,
+  SUM(amount)                     AS total_revenue,
+  AVG(amount)                     AS avg_order
+FROM orders
+GROUP BY 1
+ORDER BY 1;
+
+
+--4. Usunięcie całego roku bez DELETE (błyskawiczne!):
+
+-- Zamiast: DELETE FROM orders WHERE created_at < '2024-01-01';
+DROP TABLE orders_2023;
+-- lub: ALTER TABLE orders DETACH PARTITION orders_2023;	
+
+explain
+select * from orders_2024
